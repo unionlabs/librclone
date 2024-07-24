@@ -16,14 +16,18 @@ fn main() {
     println!("cargo:rerun-if-changed=go.mod");
     println!("cargo:rerun-if-changed=go.sum");
 
-    Command::new("go")
-        .args(["build", "--buildmode=c-archive", "-o"])
-        .arg(&format!("{}/librclone.a", out_dir))
-        .arg("github.com/rclone/rclone/librclone")
-        .status()
-        .expect("`go build` failed. Is `go` installed and latest version?");
+    println!("cargo:rerun-if-env-changed=DONT_BUILD_RCLONE");
+    let build_rclone = std::env::var("DONT_BUILD_RCLONE").is_err();
+    if build_rclone {
+        Command::new("go")
+            .args(["build", "--buildmode=c-archive", "-o"])
+            .arg(&format!("{}/librclone.a", out_dir))
+            .arg("github.com/rclone/rclone/librclone")
+            .status()
+            .expect("`go build` failed. Is `go` installed and latest version?");
+    }
 
-    println!("cargo:rustc-link-search=native={}", out_dir);
+    println!("cargo:rustc-link-search=native={}", if build_rclone { out_dir.clone() } else { std::env::var("RCLONE_LIB_PATH").unwrap() });
     println!("cargo:rustc-link-lib=static=rclone");
 
     if target_triple.ends_with("darwin") {
@@ -34,7 +38,7 @@ fn main() {
     }
 
     let bindings = bindgen::Builder::default()
-        .header(format!("{}/librclone.h", out_dir))
+        .header(format!("{}/librclone.h", if build_rclone { out_dir } else { std::env::var("RCLONE_INCLUDE_PATH").unwrap() }))
         .allowlist_function("RcloneRPC")
         .allowlist_function("RcloneInitialize")
         .allowlist_function("RcloneFinalize")

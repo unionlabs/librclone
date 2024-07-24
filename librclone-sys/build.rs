@@ -28,7 +28,7 @@ fn main() {
     }
 
     println!("cargo:rustc-link-search=native={}", if build_rclone { out_dir.clone() } else { std::env::var("RCLONE_LIB_PATH").unwrap() });
-    println!("cargo:rustc-link-lib=dylib=rclone");
+    println!("cargo:rustc-link-lib=static=rclone");
 
     if target_triple.ends_with("darwin") {
         println!("cargo:rustc-link-lib=framework=CoreFoundation");
